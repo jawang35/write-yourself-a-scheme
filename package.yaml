@@ -1,14 +1,13 @@
 name:                write-yourself-a-scheme
 version:             0.1.0.0
-github:              "githubuser/write-yourself-a-scheme"
+github:              "jawang35/write-yourself-a-scheme"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Jason Wang"
+maintainer:          "jawang35@gmail.com"
+copyright:           "2018 Jason Wang"
 
 extra-source-files:
 - README.md
-- ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -17,7 +16,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/write-yourself-a-scheme#readme>
+description:         Please see the README on GitHub at <https://github.com/jawang35/write-yourself-a-scheme#readme>
 
 dependencies:
 - base >= 4.7 && < 5
