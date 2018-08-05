@@ -87,7 +87,7 @@ parseQuoted = do
     return $ List [Atom "quote", x]
 
 parseExpr :: Parser LispVal
-parseExpr = choice [parseNumber, parseAtom, parseString, parseQuoted, parseLists]
+parseExpr = choice [parseQuoted, parseNumber, parseAtom, parseString, parseLists]
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
