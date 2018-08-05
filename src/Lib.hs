@@ -5,25 +5,7 @@ module Lib
 import Data.Char (digitToInt)
 import Numeric (readInt, readHex, readOct)
 import Text.ParserCombinators.Parsec hiding (spaces)
-
-data LispVal = Atom String
-             | List [LispVal]
-             | DottedList [LispVal] LispVal
-             | Number Integer
-             | String String
-             | Bool Bool
-
-instance Show LispVal where
-    show (String contents) = "\"" ++ contents ++ "\""
-    show (Atom name) = name
-    show (Number contents) = show contents
-    show (Bool True) = "#t"
-    show (Bool False) = "#f"
-    show (List contents) = "(" ++ unwordsList contents ++ ")"
-    show (DottedList head tail) = "(" ++ unwordsList head ++ " . " ++ show tail ++ ")"
-
-unwordsList :: (Show a) => [a] -> String
-unwordsList = unwords . map show
+import LispVal
 
 symbol :: Parser Char
 symbol = oneOf "!$%&!*+-/:<=?>@^_~#"
