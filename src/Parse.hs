@@ -1,4 +1,4 @@
-module Lib
+module Parse
     ( readExpr
     ) where
 
@@ -71,7 +71,7 @@ parseQuoted = do
 parseExpr :: Parser LispVal
 parseExpr = choice [parseQuoted, parseNumber, parseAtom, parseString, parseLists]
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-    Left err  -> "No match: " ++ show err
-    Right val -> "Found value: " ++ show val
+    Left err  -> String $ "No match: " ++ show err
+    Right val -> val
