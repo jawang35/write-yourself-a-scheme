@@ -19,6 +19,8 @@ primitives = Map.fromList [ ("+", numericBinop (+))
                           , ("symbol?", testSymbol)
                           , ("number?", testNumber)
                           , ("string?", testString)
+                          , ("symbol->string", symbolToString)
+                          , ("string->symbol", stringToSymbol)
                           ]
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
@@ -47,6 +49,12 @@ testNumber _          = Bool False
 testString :: [LispVal] -> LispVal
 testString [String _] = Bool True
 testString _          = Bool False
+
+symbolToString :: [LispVal] -> LispVal
+symbolToString [Atom val] = String val
+
+stringToSymbol :: [LispVal] -> LispVal
+stringToSymbol [String val] = Atom val
 
 apply :: String -> [LispVal] -> LispVal
 apply func args = maybe (Bool False) ($ args) $ Map.lookup func primitives
