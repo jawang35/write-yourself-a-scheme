@@ -1,8 +1,11 @@
 module Main where
 
+import Control.Monad (liftM)
 import System.Environment (getArgs)
-import Eval (eval)
-import Parse (readExpr)
+import Lisp (eval, extractValue, readExpr, trapError)
 
 main :: IO ()
-main = getArgs >>= putStrLn . show . eval . readExpr . head
+main = do
+    args <- getArgs
+    evaled <- return $ liftM show $ readExpr (head args) >>= eval
+    putStrLn $ extractValue $ trapError evaled
