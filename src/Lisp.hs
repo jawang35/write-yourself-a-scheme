@@ -101,6 +101,9 @@ primitives = Map.fromList [ ("+", numericBinop (+))
                           , ("string<?", strBoolBinop (<))
                           , ("string<=?", strBoolBinop (<=))
                           , ("string>=?", strBoolBinop (>=))
+                          , ("car", car)
+                          , ("cdr", cdr)
+                          , ("cons", cons)
                           , ("boolean?", testBoolean)
                           , ("list?", testList)
                           , ("symbol?", testSymbol)
@@ -176,6 +179,25 @@ stringToSymbol :: [LispVal] -> ThrowsError LispVal
 stringToSymbol [String val] = return $ Atom val
 stringToSymbol [notString]  = throwError $ TypeMismatch "string" notString
 stringToSymbol args         = throwError $ NumArgs 1 args
+
+car :: [LispVal] -> ThrowsError LispVal
+car [List (x:_)]         = return x
+car [DottedList (x:_) _] = return x
+car [badArg]             = throwError $ TypeMismatch "pair" badArg
+car badArgList           = throwError $ NumArgs 1 badArgList
+
+cdr :: [LispVal] -> ThrowsError LispVal
+cdr [List (_:xs)] = return $ List xs
+cdr [DottedList [x] y] = return y
+cdr [DottedList (_:xs) y] = return $ DottedList xs y
+cdr [badArg] = throwError $ TypeMismatch "pair" badArg
+cdr badArgList = throwError $ NumArgs 1 badArgList
+
+cons :: [LispVal] -> ThrowsError LispVal
+cons [x, List xs]         = return $ List $ x:xs
+cons [x, DottedList xs y] = return $ DottedList (x:xs) y
+cons [x, y]               = return $ DottedList [x] y
+cons badArgList           = throwError $ NumArgs 2 badArgList
 
 apply :: String -> [LispVal] -> ThrowsError LispVal
 apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func) ($ args) $ Map.lookup func primitives
