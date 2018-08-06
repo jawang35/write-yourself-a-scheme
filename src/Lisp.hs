@@ -127,7 +127,7 @@ unpackBool (Bool b) = return b
 unpackBool notBool  = throwError $ TypeMismatch "boolean" notBool
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
-boolBinop unpacker op (x:y:[]) = do
+boolBinop unpacker op [x, y] = do
     left <- unpacker $ x
     right <- unpacker $ y
     return $ Bool $ left `op` right
@@ -181,12 +181,17 @@ apply :: String -> [LispVal] -> ThrowsError LispVal
 apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func) ($ args) $ Map.lookup func primitives
 
 eval :: LispVal -> ThrowsError LispVal
-eval val@(String _)             = return val
-eval val@(Number _)             = return val
-eval val@(Bool _)               = return val
-eval (List [Atom "quote", val]) = return val
-eval (List (Atom func:args))    = mapM eval args >>= apply func
-eval badForm                    = throwError $ BadSpecialForm "Unrecognized special form" badForm
+eval val@(String _)                        = return val
+eval val@(Number _)                        = return val
+eval val@(Bool _)                          = return val
+eval (List [Atom "quote", val])            = return val
+eval (List [Atom "if", pred, conseq, alt]) = do
+                                             result <- eval pred
+                                             case result of
+                                                 Bool False -> eval alt
+                                                 _          -> eval conseq
+eval (List (Atom func:args))               = mapM eval args >>= apply func
+eval badForm                               = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 data LispVal = Atom String
              | List [LispVal]
