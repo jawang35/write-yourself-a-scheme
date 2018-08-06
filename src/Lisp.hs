@@ -104,6 +104,8 @@ primitives = Map.fromList [ ("+", numericBinop (+))
                           , ("car", car)
                           , ("cdr", cdr)
                           , ("cons", cons)
+                          , ("eq?", eqv)
+                          , ("eqv?", eqv)
                           , ("boolean?", testBoolean)
                           , ("list?", testList)
                           , ("symbol?", testSymbol)
@@ -198,6 +200,19 @@ cons [x, List xs]         = return $ List $ x:xs
 cons [x, DottedList xs y] = return $ DottedList (x:xs) y
 cons [x, y]               = return $ DottedList [x] y
 cons badArgList           = throwError $ NumArgs 2 badArgList
+
+eqv :: [LispVal] -> ThrowsError LispVal
+eqv [(Bool x), (Bool y)]                   = return $ Bool $ x == y
+eqv [(Number x), (Number y)]               = return $ Bool $ x == y
+eqv [(String x), (String y)]               = return $ Bool $ x == y
+eqv [(Atom x), (Atom y)]                   = return $ Bool $ x == y
+eqv [(List x), (List y)]                   = return $ Bool $ (length x == length y) && (and $ map eqvPair $ zip x y)
+                                                 where eqvPair (x1, x2) = case eqv [x1, x2] of
+                                                                              Left err         -> False
+                                                                              Right (Bool val) -> val
+eqv [(DottedList xs x), (DottedList ys y)] = eqv [List $ x:xs, List $ y:ys]
+eqv [_, _]                                 = return $ Bool False
+eqv badArgList                             = throwError $ NumArgs 2 badArgList
 
 apply :: String -> [LispVal] -> ThrowsError LispVal
 apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func) ($ args) $ Map.lookup func primitives
