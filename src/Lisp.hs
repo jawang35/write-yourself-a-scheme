@@ -133,8 +133,8 @@ unpackBool notBool  = throwError $ TypeMismatch "boolean" notBool
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpacker op [x, y] = do
-    left <- unpacker $ x
-    right <- unpacker $ y
+    left <- unpacker x
+    right <- unpacker y
     return $ Bool $ left `op` right
 boolBinop _ _ args = throwError $ NumArgs 2 args
 
@@ -202,15 +202,15 @@ cons [x, y]               = return $ DottedList [x] y
 cons badArgList           = throwError $ NumArgs 2 badArgList
 
 eqv :: [LispVal] -> ThrowsError LispVal
-eqv [(Bool x), (Bool y)]                   = return $ Bool $ x == y
-eqv [(Number x), (Number y)]               = return $ Bool $ x == y
-eqv [(String x), (String y)]               = return $ Bool $ x == y
-eqv [(Atom x), (Atom y)]                   = return $ Bool $ x == y
-eqv [(List x), (List y)]                   = return $ Bool $ (length x == length y) && (and $ map eqvPair $ zip x y)
+eqv [Bool x, Bool y]                   = return $ Bool $ x == y
+eqv [Number x, Number y]               = return $ Bool $ x == y
+eqv [String x, String y]               = return $ Bool $ x == y
+eqv [Atom x, Atom y]                   = return $ Bool $ x == y
+eqv [List x, List y]                   = return $ Bool $ (length x == length y) && all eqvPair (zip x y)
                                                  where eqvPair (x1, x2) = case eqv [x1, x2] of
                                                                               Left err         -> False
                                                                               Right (Bool val) -> val
-eqv [(DottedList xs x), (DottedList ys y)] = eqv [List $ x:xs, List $ y:ys]
+eqv [DottedList xs x, DottedList ys y] = eqv [List $ x:xs, List $ y:ys]
 eqv [_, _]                                 = return $ Bool False
 eqv badArgList                             = throwError $ NumArgs 2 badArgList
 
