@@ -206,7 +206,10 @@ eqv [Bool x, Bool y]                   = return $ Bool $ x == y
 eqv [Number x, Number y]               = return $ Bool $ x == y
 eqv [String x, String y]               = return $ Bool $ x == y
 eqv [Atom x, Atom y]                   = return $ Bool $ x == y
-eqv [List x, List y]                   = return $ Bool $ x == y
+eqv [List x, List y]                   = return $ Bool $ (length x == length y) && all eqvPair (zip x y)
+                                             where eqvPair (x1, x2) = case eqv [x1, x2] of
+                                                                          Left err -> False
+                                                                          Right (Bool val) -> val
 eqv [DottedList xs x, DottedList ys y] = eqv [List $ x:xs, List $ y:ys]
 eqv [_, _]                             = return $ Bool False
 eqv badArgList                         = throwError $ NumArgs 2 badArgList
