@@ -1,14 +1,20 @@
 module Lisp
-    ( eval
+    ( Env
+    , eval
     , extractValue
+    , liftThrows
+    , nullEnv
     , readExpr
+    , runIOThrows
     , trapError
     ) where
 
-import Control.Monad.Except (catchError, throwError)
+import Control.Monad.Except (ExceptT, catchError, liftIO, runExceptT, throwError)
 import Data.Char (digitToInt)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Numeric (readInt, readHex, readOct)
 import Text.ParserCombinators.Parsec hiding (spaces)
 
@@ -217,18 +223,67 @@ eqv badArgList                         = throwError $ NumArgs 2 badArgList
 apply :: String -> [LispVal] -> ThrowsError LispVal
 apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args" func) ($ args) $ Map.lookup func primitives
 
-eval :: LispVal -> ThrowsError LispVal
-eval val@(String _)                        = return val
-eval val@(Number _)                        = return val
-eval val@(Bool _)                          = return val
-eval (List [Atom "quote", val])            = return val
-eval (List [Atom "if", pred, conseq, alt]) = do
-                                             result <- eval pred
-                                             case result of
-                                                 Bool False -> eval alt
-                                                 _          -> eval conseq
-eval (List (Atom func:args))               = mapM eval args >>= apply func
-eval badForm                               = throwError $ BadSpecialForm "Unrecognized special form" badForm
+type Env = IORef [(String, IORef LispVal)]
+
+nullEnv :: IO Env
+nullEnv = newIORef []
+
+type IOThrowsError = ExceptT LispError IO
+
+liftThrows :: ThrowsError a -> IOThrowsError a
+liftThrows (Left err)  = throwError err
+liftThrows (Right val) = return val
+
+runIOThrows :: IOThrowsError String -> IO String
+runIOThrows action = extractValue <$> runExceptT (trapError action)
+
+isBound :: Env -> String -> IO Bool
+isBound envRef var = isJust . lookup var <$> readIORef envRef
+
+getVar :: Env -> String -> IOThrowsError LispVal
+getVar envRef var = do
+    env <- liftIO $ readIORef envRef
+    maybe (throwError $ UnboundVar "Getting an unbound variable" var) (liftIO . readIORef) $ lookup var env
+
+setVar :: Env -> String -> LispVal -> IOThrowsError LispVal
+setVar envRef var val = do
+    env <- liftIO $ readIORef envRef
+    maybe (throwError $ UnboundVar "Setting an unbound variable" var) (liftIO . (`writeIORef` val)) $ lookup var env
+    return val
+
+defineVar :: Env -> String -> LispVal -> IOThrowsError LispVal
+defineVar envRef var val = do
+    alreadyDefined <- liftIO $ isBound envRef var
+    if alreadyDefined
+        then setVar envRef var val
+        else liftIO $ do
+            valueRef <- newIORef val
+            env <- readIORef envRef
+            writeIORef envRef ((var, valueRef):env)
+            return val
+
+bindVar :: Env -> [(String, LispVal)] -> IO Env
+bindVar envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
+    where addBindings (var, val) = do
+              ref <- newIORef val
+              return (var, ref)
+          extendEnv bindings env = fmap (++ env) (mapM addBindings bindings)
+
+eval :: Env -> LispVal -> IOThrowsError LispVal
+eval env val@(String _)                         = return val
+eval env val@(Number _)                         = return val
+eval env val@(Bool _)                           = return val
+eval env (Atom id)                              = getVar env id
+eval env (List [Atom "quote", val])             = return val
+eval env (List [Atom "if", pred, conseq, alt])  = do
+                                                  result <- eval env pred
+                                                  case result of
+                                                      Bool False -> eval env alt
+                                                      _          -> eval env conseq
+eval env (List [Atom "set!", Atom var, form])   = eval env form >>= setVar env var
+eval env (List [Atom "define", Atom var, form]) = eval env form >>= defineVar env var
+eval env (List (Atom func:args))                = mapM (eval env) args >>= liftThrows . apply func
+eval env badForm                                = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 data LispVal = Atom String
              | List [LispVal]
